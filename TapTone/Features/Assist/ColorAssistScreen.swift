@@ -18,79 +18,16 @@ struct ColorAssistScreen: View {
     @State private var showingOriginal = false
 
     private static let thumbnailSide: CGFloat = 192
-    private static let resetKey = "reset"
+    nonisolated private static let resetKey = "reset"
 
     var body: some View {
-        VStack(spacing: 0) {
-            Text(strings.t("tagline"))
-                .font(AppFont.bodyMedium.weight(.medium))
-                .lineSpacing(AppFont.bodyLineSpacing)
-                .foregroundStyle(palette.onSurfaceVariant)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
-            Spacer().frame(height: 12)
-            PhotoPreview(
-                image: previewImage,
-                label: showingOriginal || activeFilter == nil ? strings.t("original") : activeFilter!.title,
-                isFiltered: activeFilter != nil && !showingOriginal,
-                canCompare: selectedImage != nil && activeFilter != nil,
-                compareLabel: strings.t("original"),
-                emptyTitle: strings.t("uploadPhoto"),
-                showingOriginal: $showingOriginal,
-                onTapEmpty: { pickerSource = .gallery }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Spacer().frame(height: 14)
-            HStack(spacing: 10) {
-                Button {
-                    // image_picker fails without a camera (e.g. Simulator); do nothing there.
-                    if UIImagePickerController.isSourceTypeAvailable(.camera) { pickerSource = .camera }
-                } label: {
-                    IconLabel(systemImage: "camera.fill", title: strings.t("takePhoto"))
-                }
-                .buttonStyle(FilledButtonStyle(cornerRadius: 18))
-                Button { pickerSource = .gallery } label: {
-                    IconLabel(systemImage: "photo.on.rectangle", title: strings.t("uploadPhoto"))
-                }
-                .buttonStyle(TonalButtonStyle(cornerRadius: 18))
+        GeometryReader { proxy in
+            if AdaptiveLayout.isWideLandscape(proxy.size) {
+                wideLayout(width: proxy.size.width)
+            } else {
+                stackedLayout
             }
-            Spacer().frame(height: 18)
-            HStack(spacing: 8) {
-                Image(systemName: "camera.filters")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.primary)
-                Text(strings.t("assistFilters"))
-                    .font(AppFont.titleMedium)
-                    .foregroundStyle(palette.onSurface)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Spacer().frame(height: 10)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 12) {
-                    FilterTile(
-                        title: strings.t("reset"),
-                        image: thumbnails[Self.resetKey],
-                        isSelected: activeFilter == nil,
-                        badgeSystemImage: "arrow.counterclockwise",
-                        onTap: { select(nil) }
-                    )
-                    ForEach(AssistFilter.allCases) { filter in
-                        FilterTile(
-                            title: filter.title,
-                            image: thumbnails[filter.title],
-                            isSelected: activeFilter == filter,
-                            badgeSystemImage: "checkmark",
-                            onTap: { select(AssistFilter.byTitle(filter.title)) }
-                        )
-                    }
-                }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 4)
-            }
-            .scrollClipDisabled()
-            .frame(height: 124)
         }
-        .padding(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
         .sensoryFeedback(.selection, trigger: activeFilter)
         .task(id: selectedImage.map { ObjectIdentifier($0) }) { await rebuildThumbnails() }
         .onChange(of: activeFilter) { _, filter in renderPreview(for: filter) }
@@ -105,6 +42,149 @@ struct ColorAssistScreen: View {
                         .ignoresSafeArea()
                 }
             }
+        }
+    }
+
+    /// Phones, iPad portrait and unfolded portrait: everything in one column.
+    private var stackedLayout: some View {
+        VStack(spacing: 0) {
+            tagline
+            Spacer().frame(height: 12)
+            preview
+            Spacer().frame(height: 14)
+            actionButtons
+            Spacer().frame(height: 18)
+            filtersHeader
+            Spacer().frame(height: 10)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) { filterTiles }
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 4)
+            }
+            .scrollClipDisabled()
+            .frame(height: 124)
+        }
+        .padding(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+        .readableWidth(720)
+    }
+
+    /// iPad landscape and wide windows: photo on the left, controls on the right.
+    private func wideLayout(width: CGFloat) -> some View {
+        HStack(alignment: .center, spacing: 28) {
+            preview
+            VStack(alignment: .leading, spacing: 0) {
+                tagline
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.leading)
+                Spacer().frame(height: 16)
+                actionButtons
+                Spacer().frame(height: 22)
+                filtersHeader
+                Spacer().frame(height: 12)
+                ScrollView {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 96), spacing: 12, alignment: .top)],
+                        spacing: 14
+                    ) { filterTiles }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
+            // Narrower control column on short landscape screens (folded Duo, iPhone sideways).
+            .frame(width: min(340, max(230, width * 0.42)))
+        }
+        .padding(EdgeInsets(top: 16, leading: 24, bottom: 12, trailing: 24))
+        .frame(maxWidth: 1100)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var tagline: some View {
+        Text(strings.t("tagline"))
+            .font(AppFont.bodyMedium.weight(.medium))
+            .lineSpacing(AppFont.bodyLineSpacing)
+            .foregroundStyle(palette.onSurfaceVariant)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 12)
+    }
+
+    private var preview: some View {
+        PhotoPreview(
+            image: previewImage,
+            label: showingOriginal || activeFilter == nil ? strings.t("original") : activeFilter!.title,
+            isFiltered: activeFilter != nil && !showingOriginal,
+            canCompare: selectedImage != nil && activeFilter != nil,
+            compareLabel: strings.t("original"),
+            emptyTitle: strings.t("uploadPhoto"),
+            showingOriginal: $showingOriginal,
+            onTapEmpty: { pickerSource = .gallery }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Side by side when both labels fit; stacked in narrow columns
+    /// (folded iPhone Duo, iPhone held sideways) so they never truncate.
+    private var actionButtons: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                takePhotoButton
+                uploadPhotoButton
+            }
+            VStack(spacing: 10) {
+                takePhotoButton
+                uploadPhotoButton
+            }
+        }
+    }
+
+    private var takePhotoButton: some View {
+        Button {
+            // image_picker fails without a camera (e.g. Simulator); do nothing there.
+            if UIImagePickerController.isSourceTypeAvailable(.camera) { pickerSource = .camera }
+        } label: {
+            IconLabel(systemImage: "camera.fill", title: strings.t("takePhoto"))
+                .fixedSize()
+        }
+        .buttonStyle(FilledButtonStyle(cornerRadius: 18))
+    }
+
+    private var uploadPhotoButton: some View {
+        Button { pickerSource = .gallery } label: {
+            IconLabel(systemImage: "photo.on.rectangle", title: strings.t("uploadPhoto"))
+                .fixedSize()
+        }
+        .buttonStyle(TonalButtonStyle(cornerRadius: 18))
+    }
+
+    private var filtersHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "camera.filters")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(palette.primary)
+            Text(strings.t("assistFilters"))
+                .font(AppFont.titleMedium)
+                .foregroundStyle(palette.onSurface)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var filterTiles: some View {
+        FilterTile(
+            title: strings.t("reset"),
+            image: thumbnails[Self.resetKey],
+            isSelected: activeFilter == nil,
+            badgeSystemImage: "arrow.counterclockwise",
+            onTap: { select(nil) }
+        )
+        ForEach(AssistFilter.allCases) { filter in
+            FilterTile(
+                title: filter.title,
+                image: thumbnails[filter.title],
+                isSelected: activeFilter == filter,
+                badgeSystemImage: "checkmark",
+                onTap: { select(AssistFilter.byTitle(filter.title)) }
+            )
         }
     }
 

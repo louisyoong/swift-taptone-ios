@@ -21,6 +21,11 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
 
     let session = AVCaptureSession()
     let mode: Mode
+    /// The capture device, set once configured (used by the preview layer
+    /// to follow device rotation).
+    private(set) var device: AVCaptureDevice?
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    private var rotationObservation: NSKeyValueObservation?
 
     private let sessionQueue = DispatchQueue(label: "taptone.camera.session")
     private let videoQueue = DispatchQueue(label: "taptone.camera.frames")
@@ -107,9 +112,21 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
         guard session.canAddOutput(output) else { return false }
         session.addOutput(output)
 
-        if mode == .simulate, let connection = output.connection(with: .video),
-           connection.isVideoRotationAngleSupported(90) {
-            connection.videoRotationAngle = 90 // portrait frames
+        self.device = device
+        if mode == .simulate, let connection = output.connection(with: .video) {
+            // Keep frames upright in any orientation (iPad landscape, iPhone
+            // turned sideways), not just portrait.
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
+            rotationCoordinator = coordinator
+            rotationObservation = coordinator.observe(
+                \.videoRotationAngleForHorizonLevelCapture,
+                options: [.initial, .new]
+            ) { [weak self] coordinator, _ in
+                let angle = coordinator.videoRotationAngleForHorizonLevelCapture
+                self?.sessionQueue.async {
+                    if connection.isVideoRotationAngleSupported(angle) { connection.videoRotationAngle = angle }
+                }
+            }
         }
         return true
     }
@@ -240,10 +257,32 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
 /// Native camera preview (used by the Detect tab, which shows unfiltered video).
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
+    let device: AVCaptureDevice?
 
     final class PreviewView: UIView {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+
+        private var coordinator: AVCaptureDevice.RotationCoordinator?
+        private var observation: NSKeyValueObservation?
+
+        /// Rotates the preview to match how the device is held.
+        func follow(_ device: AVCaptureDevice?) {
+            guard let device, coordinator?.device != device else { return }
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+            self.coordinator = coordinator
+            observation = coordinator.observe(
+                \.videoRotationAngleForHorizonLevelPreview,
+                options: [.initial, .new]
+            ) { [weak self] coordinator, _ in
+                let angle = coordinator.videoRotationAngleForHorizonLevelPreview
+                DispatchQueue.main.async {
+                    guard let connection = self?.previewLayer.connection,
+                          connection.isVideoRotationAngleSupported(angle) else { return }
+                    connection.videoRotationAngle = angle
+                }
+            }
+        }
     }
 
     func makeUIView(context: Context) -> PreviewView {
@@ -251,10 +290,13 @@ struct CameraPreviewView: UIViewRepresentable {
         view.backgroundColor = .black
         view.previewLayer.session = session
         view.previewLayer.videoGravity = .resizeAspectFill
+        view.follow(device)
         return view
     }
 
-    func updateUIView(_ uiView: PreviewView, context: Context) {}
+    func updateUIView(_ uiView: PreviewView, context: Context) {
+        uiView.follow(device)
+    }
 }
 
 /// Shared "Starting camera..." / "Camera unavailable" message.

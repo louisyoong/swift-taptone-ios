@@ -53,6 +53,7 @@ struct OnboardingScreen: View {
             .buttonStyle(FilledButtonStyle())
         }
         .padding(EdgeInsets(top: 22, leading: 24, bottom: 24, trailing: 24))
+        .readableWidth(560)
     }
 }
 

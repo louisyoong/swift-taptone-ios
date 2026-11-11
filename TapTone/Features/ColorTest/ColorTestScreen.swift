@@ -120,6 +120,7 @@ private struct ModeSelectionView: View {
                     .padding(.top, 4)
             }
             .padding(EdgeInsets(top: 24, leading: 20, bottom: 24, trailing: 20))
+            .readableWidth(640)
         }
         .scrollBounceBehavior(.basedOnSize)
     }
@@ -368,6 +369,7 @@ private struct IntroView: View {
             .buttonStyle(AccentFilledButtonStyle(accent: accent))
         }
         .padding(EdgeInsets(top: 8, leading: 20, bottom: 20, trailing: 20))
+        .readableWidth(640)
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { appeared = true }
         }
@@ -513,46 +515,74 @@ private struct QuizView: View {
     var body: some View {
         let keyboardVisible = fieldFocused
         GeometryReader { proxy in
-            // Fit plate + answer controls on one screen without scrolling.
-            let plateSize = max(140, min(proxy.size.width - 48, keyboardVisible ? 150 : 270, proxy.size.height - 330))
-            ScrollView {
-                VStack(spacing: 0) {
-                    ProgressHeader(index: index, total: total, accent: accent)
-                    Spacer().frame(height: keyboardVisible ? 6 : 12)
-                    PlateStage(dots: dots, size: plateSize, index: index, accent: accent)
-                    Spacer().frame(height: keyboardVisible ? 6 : 12)
-                    Text(strings.t("colorTest.prompt"))
-                        .font(AppFont.titleMedium)
-                        .foregroundStyle(palette.onSurface)
-                        .multilineTextAlignment(.center)
-                    Spacer().frame(height: 12)
-                    answerField
-                    Spacer().frame(height: 12)
-                    cantSeeToggle
-                    Spacer().frame(height: 16)
-                    Button(action: onSubmit) {
-                        IconLabel(
-                            systemImage: index == total - 1 ? "checkmark" : "arrow.forward",
-                            title: index == total - 1 ? strings.t("colorTest.finish") : strings.t("colorTest.next")
-                        )
+            if AdaptiveLayout.isWideLandscape(proxy.size) {
+                // iPad landscape / unfolded sideways: plate left, answer controls right.
+                let plateSize = max(160, min(proxy.size.height - 110, proxy.size.width * 0.44 - 36, 440))
+                HStack(spacing: 32) {
+                    VStack(spacing: 14) {
+                        ProgressHeader(index: index, total: total, accent: accent)
+                        PlateStage(dots: dots, size: plateSize, index: index, accent: accent)
                     }
-                    .buttonStyle(AccentFilledButtonStyle(accent: accent))
-                    .disabled(!canSubmit)
+                    .frame(width: plateSize + 28)
+                    ScrollView {
+                        controls.frame(maxWidth: 380)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .defaultScrollAnchor(.center)
                 }
-                .frame(width: proxy.size.width)
-                .background(
-                    // Tap outside the field to dismiss the keyboard.
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { fieldFocused = false }
-                )
-                .animation(.easeOut(duration: 0.2), value: keyboardVisible)
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .background(dismissKeyboardTarget)
+            } else {
+                // Fit plate + answer controls on one screen without scrolling.
+                let cap: CGFloat = AdaptiveLayout.isRoomy(proxy.size) ? 400 : 270
+                let plateSize = max(140, min(proxy.size.width - 48, keyboardVisible ? 150 : cap, proxy.size.height - 330))
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ProgressHeader(index: index, total: total, accent: accent)
+                        Spacer().frame(height: keyboardVisible ? 6 : 12)
+                        PlateStage(dots: dots, size: plateSize, index: index, accent: accent)
+                        Spacer().frame(height: keyboardVisible ? 6 : 12)
+                        controls.frame(maxWidth: 520)
+                    }
+                    .frame(width: proxy.size.width)
+                    .background(dismissKeyboardTarget)
+                    .animation(.easeOut(duration: 0.2), value: keyboardVisible)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .scrollBounceBehavior(.basedOnSize)
         }
         .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
         .sensoryFeedback(.selection, trigger: index)
+    }
+
+    /// Tap outside the field to dismiss the keyboard.
+    private var dismissKeyboardTarget: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .onTapGesture { fieldFocused = false }
+    }
+
+    private var controls: some View {
+        VStack(spacing: 0) {
+            Text(strings.t("colorTest.prompt"))
+                .font(AppFont.titleMedium)
+                .foregroundStyle(palette.onSurface)
+                .multilineTextAlignment(.center)
+            Spacer().frame(height: 12)
+            answerField
+            Spacer().frame(height: 12)
+            cantSeeToggle
+            Spacer().frame(height: 16)
+            Button(action: onSubmit) {
+                IconLabel(
+                    systemImage: index == total - 1 ? "checkmark" : "arrow.forward",
+                    title: index == total - 1 ? strings.t("colorTest.finish") : strings.t("colorTest.next")
+                )
+            }
+            .buttonStyle(AccentFilledButtonStyle(accent: accent))
+            .disabled(!canSubmit)
+        }
     }
 
     private var answerField: some View {
@@ -764,38 +794,63 @@ private struct ChoiceQuizView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let plateSize = max(140, min(proxy.size.width - 48, 230, proxy.size.height - 250))
-            let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-            let optionColors = [accent.container, palette.primaryContainer, palette.tertiaryContainer, palette.secondaryContainer]
-            ScrollView {
-                VStack(spacing: 0) {
-                    ProgressHeader(index: index, total: total, accent: accent)
-                    Spacer().frame(height: 12)
-                    PlateStage(dots: dots, size: plateSize, index: index, accent: accent)
-                    Spacer().frame(height: 12)
-                    Text(prompt)
-                        .font(AppFont.titleMedium)
-                        .foregroundStyle(palette.onSurface)
-                        .multilineTextAlignment(.center)
-                    Spacer().frame(height: 14)
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(Array(options.enumerated()), id: \.offset) { i, itemIndex in
-                            ChoiceOptionButton(
-                                item: items[itemIndex],
-                                color: optionColors[i % 4],
-                                onTap: { onSelect(itemIndex) }
-                            )
-                        }
+            if AdaptiveLayout.isWideLandscape(proxy.size) {
+                // iPad landscape / unfolded sideways: plate left, choices right.
+                let plateSize = max(160, min(proxy.size.height - 110, proxy.size.width * 0.44 - 36, 440))
+                HStack(spacing: 32) {
+                    VStack(spacing: 14) {
+                        ProgressHeader(index: index, total: total, accent: accent)
+                        PlateStage(dots: dots, size: plateSize, index: index, accent: accent)
                     }
-                    .id(index)
-                    .transition(.opacity)
+                    .frame(width: plateSize + 28)
+                    ScrollView {
+                        choices.frame(maxWidth: 420)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .defaultScrollAnchor(.center)
                 }
-                .frame(width: proxy.size.width)
+                .frame(width: proxy.size.width, height: proxy.size.height)
+            } else {
+                let cap: CGFloat = AdaptiveLayout.isRoomy(proxy.size) ? 380 : 230
+                let plateSize = max(140, min(proxy.size.width - 48, cap, proxy.size.height - 250))
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ProgressHeader(index: index, total: total, accent: accent)
+                        Spacer().frame(height: 12)
+                        PlateStage(dots: dots, size: plateSize, index: index, accent: accent)
+                        Spacer().frame(height: 12)
+                        choices.frame(maxWidth: 560)
+                    }
+                    .frame(width: proxy.size.width)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
         .sensoryFeedback(.selection, trigger: index)
+    }
+
+    private var choices: some View {
+        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+        let optionColors = [accent.container, palette.primaryContainer, palette.tertiaryContainer, palette.secondaryContainer]
+        return VStack(spacing: 0) {
+            Text(prompt)
+                .font(AppFont.titleMedium)
+                .foregroundStyle(palette.onSurface)
+                .multilineTextAlignment(.center)
+            Spacer().frame(height: 14)
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(Array(options.enumerated()), id: \.offset) { i, itemIndex in
+                    ChoiceOptionButton(
+                        item: items[itemIndex],
+                        color: optionColors[i % 4],
+                        onTap: { onSelect(itemIndex) }
+                    )
+                }
+            }
+            .id(index)
+            .transition(.opacity)
+        }
     }
 }
 
@@ -908,6 +963,7 @@ private struct ResultView: View {
             .buttonStyle(AccentFilledButtonStyle(accent: accent))
         }
         .padding(EdgeInsets(top: 8, leading: 20, bottom: 20, trailing: 20))
+        .readableWidth(640)
         .onAppear {
             withAnimation(.easeOut(duration: 0.9).delay(0.15)) {
                 progress = CGFloat(correct) / CGFloat(total)

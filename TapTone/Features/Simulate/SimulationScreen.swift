@@ -77,30 +77,37 @@ private struct LiveSimulationFilters: View {
     @Namespace private var selection
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                LiveFilterButton(
-                    title: strings.t("normal"),
-                    matrix: ColorMatrices.identity,
-                    isSelected: activeFilter == nil,
-                    namespace: selection
-                ) { onSelect(nil) }
-                ForEach(SimulationFilter.allCases) { filter in
-                    LiveFilterButton(
-                        title: filter.title,
-                        matrix: filter.matrix,
-                        isSelected: activeFilter == filter,
-                        namespace: selection
-                    ) { onSelect(filter) }
-                }
+        // Centered when every filter fits (iPad, unfolded, landscape); scrolls on narrow phones.
+        ViewThatFits(in: .horizontal) {
+            bar.padding(.horizontal, 16)
+            ScrollView(.horizontal, showsIndicators: false) {
+                bar.padding(.horizontal, 16)
             }
-            .padding(6)
-            .background(Capsule().fill(Color.black.opacity(0.4)))
-            .glassEffect(.clear, in: Capsule())
-            .environment(\.colorScheme, .dark)
-            .padding(.horizontal, 16)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
+
+    private var bar: some View {
+        HStack(spacing: 4) {
+            LiveFilterButton(
+                title: strings.t("normal"),
+                matrix: ColorMatrices.identity,
+                isSelected: activeFilter == nil,
+                namespace: selection
+            ) { onSelect(nil) }
+            ForEach(SimulationFilter.allCases) { filter in
+                LiveFilterButton(
+                    title: filter.title,
+                    matrix: filter.matrix,
+                    isSelected: activeFilter == filter,
+                    namespace: selection
+                ) { onSelect(filter) }
+            }
+        }
+        .padding(6)
+        .background(Capsule().fill(Color.black.opacity(0.4)))
+        .glassEffect(.clear, in: Capsule())
+        .environment(\.colorScheme, .dark)
     }
 }
 

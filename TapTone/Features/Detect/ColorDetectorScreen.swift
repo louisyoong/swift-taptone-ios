@@ -15,7 +15,7 @@ struct ColorDetectorScreen: View {
                 CameraMessageView(systemImage: "camera", text: strings.t("startingCamera"), isLoading: true)
             case .running:
                 DetectorLiveView(detected: camera.detected) {
-                    CameraPreviewView(session: camera.session)
+                    CameraPreviewView(session: camera.session, device: camera.device)
                 }
             }
         }
@@ -48,6 +48,7 @@ private struct DetectorLiveView<Feed: View>: View {
         }
         .overlay(alignment: .bottom) {
             DetectedColorPanel(detected: detected)
+                .frame(maxWidth: 520)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
         }

@@ -118,6 +118,16 @@ struct LiquidGlassNavBar: View {
     }
 
     private var indicator: some View {
+        NavIndicator(isDark: isDark, activeColor: activeColor)
+    }
+}
+
+/// The glossy capsule that marks the selected tab (shared by the bar and rail).
+private struct NavIndicator: View {
+    let isDark: Bool
+    let activeColor: Color
+
+    var body: some View {
         let gradient = isDark
             ? [activeColor.opacity(0.28), activeColor.opacity(0.08), Color.black.opacity(0.35)]
             : [activeColor.opacity(0.15), Color(argb: 0x4DFFFFFF), Color(argb: 0x1AFFFFFF)]
@@ -125,7 +135,7 @@ struct LiquidGlassNavBar: View {
         let innerShadow = isDark ? Color.black.opacity(0.4) : Color(argb: 0xCCFFFFFF)
         let capsule = RoundedRectangle(cornerRadius: 30, style: .continuous)
 
-        return capsule
+        capsule
             .fill(
                 LinearGradient(
                     stops: [
@@ -143,6 +153,73 @@ struct LiquidGlassNavBar: View {
     }
 }
 
+/// Vertical version of `LiquidGlassNavBar`, shown on the trailing side of
+/// wide screens (unfolded iPhone Duo, iPad, iPhone in landscape).
+struct LiquidGlassNavRail: View {
+    let items: [LiquidGlassNavBar.Item]
+    let currentIndex: Int
+    let onTap: (Int) -> Void
+    let isDark: Bool
+    let activeColor: Color
+    let inactiveColor: Color
+    let glassColor: Color
+    /// Smaller variant that fits inside the folded iPhone Duo's status column.
+    var compact = false
+
+    @Namespace private var indicatorSpace
+
+    private var itemSize: CGSize { compact ? CGSize(width: 62, height: 52) : CGSize(width: 76, height: 62) }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: compact ? 28 : 32, style: .continuous)
+        VStack(spacing: compact ? 2 : 4) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                let isSelected = currentIndex == index
+                NavBarItemView(
+                    item: item,
+                    isSelected: isSelected,
+                    isHighlighted: false,
+                    activeColor: activeColor,
+                    inactiveColor: inactiveColor,
+                    iconSize: compact ? 20 : 24,
+                    selectedIconScale: 1.2,
+                    labelSize: compact ? 9 : 10,
+                    horizontalPadding: compact ? 3 : 8
+                )
+                .frame(width: itemSize.width, height: itemSize.height)
+                .background {
+                    if isSelected {
+                        NavIndicator(isDark: isDark, activeColor: activeColor)
+                            .matchedGeometryEffect(id: "indicator", in: indicatorSpace)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.3)) { onTap(index) }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(item.label)
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(compact ? 4 : 6)
+        .background {
+            shape
+                .fill(.clear)
+                .glassEffect(.regular.tint(glassColor), in: shape)
+                .shadow(color: Color(argb: 0x1A000000), radius: 10, x: -4, y: 6)
+        }
+        .overlay {
+            shape
+                .strokeBorder(isDark ? Color.black.opacity(0.5) : Color(argb: 0xE6FFFFFF), lineWidth: 2)
+                .allowsHitTesting(false)
+        }
+        .padding(.leading, compact ? 0 : 8)
+        .padding(.trailing, compact ? 0 : 12)
+        .frame(maxHeight: .infinity)
+    }
+}
+
 private struct NavBarItemView: View {
     let item: LiquidGlassNavBar.Item
     let isSelected: Bool
@@ -151,6 +228,8 @@ private struct NavBarItemView: View {
     let inactiveColor: Color
     let iconSize: CGFloat
     let selectedIconScale: CGFloat
+    var labelSize: CGFloat = 10
+    var horizontalPadding: CGFloat = 8
 
     var body: some View {
         let isActive = isSelected || isHighlighted
@@ -163,15 +242,16 @@ private struct NavBarItemView: View {
                 .animation(.spring(response: 0.45, dampingFraction: 0.45), value: isSelected)
             if !isSelected {
                 Text(item.label)
-                    .font(.system(size: 10))
+                    .font(.system(size: labelSize))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .truncationMode(.tail)
                     .foregroundStyle(isActive ? activeColor : inactiveColor)
                     .padding(.top, 2)
                     .transition(.opacity)
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, horizontalPadding)
         .padding(.vertical, 6)
         .animation(.easeInOut(duration: 0.2), value: isSelected)
         .animation(.easeOut(duration: 0.3), value: isActive)

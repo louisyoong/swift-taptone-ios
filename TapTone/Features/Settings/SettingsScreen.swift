@@ -113,6 +113,7 @@ struct SettingsScreen: View {
                 .padding(4) // Material Card margin
             }
             .padding(EdgeInsets(top: 16, leading: 16, bottom: 24, trailing: 16))
+            .readableWidth(680)
         }
         .toast($toastMessage)
     }
