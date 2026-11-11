@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% if page.url == "/" %}TapTone — Helping colorblind users distinguish colors{% else %}{{ page.title }}{% endif %}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <meta name="theme-color" content="#F7FAF9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111817" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" href="{{ '/assets/favicon.png' | relative_url }}">
+  <link rel="apple-touch-icon" href="{{ '/assets/logo.png' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+</head>
+<body class="{% if page.url == '/' %}is-home{% else %}is-doc{% endif %}">
+  <div class="glow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ '/' | relative_url }}">
+        <img src="{{ '/assets/logo.png' | relative_url }}" alt="" width="32" height="32">
+        <span>TapTone</span>
+      </a>
+      <nav class="nav" aria-label="Pages">
+        <a href="{{ '/privacy-policy/' | relative_url }}" {% if page.url == '/privacy-policy/' %}aria-current="page"{% endif %}>Privacy</a>
+        <a href="{{ '/terms-of-use/' | relative_url }}" {% if page.url == '/terms-of-use/' %}aria-current="page"{% endif %}>Terms</a>
+        <a href="{{ '/support/' | relative_url }}" {% if page.url == '/support/' %}aria-current="page"{% endif %}>Support</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    {% if page.url != "/" %}
+    <section class="hero hero-{{ page.icon }}">
+      <div class="hero-icon" aria-hidden="true">
+        {% if page.icon == "privacy" %}
+        <svg viewBox="0 0 24 24"><path d="M12 2 4 5.5v6c0 5 3.4 9.4 8 10.5 4.6-1.1 8-5.5 8-10.5v-6L12 2Z"/><path d="m8.5 12 2.5 2.5 4.5-5" class="stroke"/></svg>
+        {% elsif page.icon == "terms" %}
+        <svg viewBox="0 0 24 24"><path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M8 12h8M8 16h6M14 2v5h5" class="stroke"/></svg>
+        {% else %}
+        <svg viewBox="0 0 24 24"><path d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-6l-5 4v-4a2 2 0 0 1-2-2V5Z"/><path d="M9.5 8a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.4M12 14.2v.1" class="stroke"/></svg>
+        {% endif %}
+      </div>
+      <p class="eyebrow">TapTone</p>
+      <h1>{{ page.heading | default: page.title }}</h1>
+      {% if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
+      {% if page.updated %}<p class="pill"><span class="dot"></span>Effective {{ page.updated }}</p>{% endif %}
+    </section>
+    <article class="doc">
+      {{ content }}
+    </article>
+    {% else %}
+      {{ content }}
+    {% endif %}
+
+    {% if page.url != "/" %}
+    <nav class="related" aria-label="Other pages">
+      {% unless page.url == '/privacy-policy/' %}
+      <a class="related-card" href="{{ '/privacy-policy/' | relative_url }}"><span class="ri ri-privacy"></span><span><strong>Privacy Policy</strong><small>How TapTone handles your data</small></span><span class="chev">›</span></a>
+      {% endunless %}
+      {% unless page.url == '/terms-of-use/' %}
+      <a class="related-card" href="{{ '/terms-of-use/' | relative_url }}"><span class="ri ri-terms"></span><span><strong>Terms of Use</strong><small>The rules for using the app</small></span><span class="chev">›</span></a>
+      {% endunless %}
+      {% unless page.url == '/support/' %}
+      <a class="related-card" href="{{ '/support/' | relative_url }}"><span class="ri ri-support"></span><span><strong>Support</strong><small>Help, tips and contact</small></span><span class="chev">›</span></a>
+      {% endunless %}
+    </nav>
+    {% endif %}
+  </main>
+
+  <footer class="footer">
+    <div class="spectrum" aria-hidden="true"></div>
+    <p>
+      <a href="{{ '/privacy-policy/' | relative_url }}">Privacy Policy</a>
+      <span aria-hidden="true">·</span>
+      <a href="{{ '/terms-of-use/' | relative_url }}">Terms of Use</a>
+      <span aria-hidden="true">·</span>
+      <a href="{{ '/support/' | relative_url }}">Support</a>
+    </p>
+    <p class="muted">© {{ site.time | date: "%Y" }} TapTone. An assistive tool, not a medical device.</p>
+  </footer>
+</body>
+</html>

@@ -2,9 +2,9 @@ import SwiftUI
 import UIKit
 
 struct SettingsScreen: View {
-    private static let privacyPolicyURL = URL(string: "https://louisyoong.github.io/TapTone/privacy-policy/")!
-    private static let termsOfUseURL = URL(string: "https://louisyoong.github.io/TapTone/terms-of-use/")!
-    private static let supportURL = URL(string: "https://louisyoong.github.io/TapTone/support/")!
+    private static let privacyPolicyURL = URL(string: "https://louisyoong.github.io/swift-taptone-ios/privacy-policy/")!
+    private static let termsOfUseURL = URL(string: "https://louisyoong.github.io/swift-taptone-ios/terms-of-use/")!
+    private static let supportURL = URL(string: "https://louisyoong.github.io/swift-taptone-ios/support/")!
 
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.strings) private var strings

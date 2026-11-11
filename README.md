@@ -17,9 +17,9 @@ TapTone helps colorblind people tell colors apart. It's a native iOS app built w
 
 TapTone works entirely on your device. It has no accounts, ads, analytics or tracking. Photos, camera images and test answers never leave your phone.
 
-- [Privacy Policy](https://louisyoong.github.io/TapTone/privacy-policy/)
-- [Terms of Use](https://louisyoong.github.io/TapTone/terms-of-use/)
-- [Support](https://louisyoong.github.io/TapTone/support/)
+- [Privacy Policy](https://louisyoong.github.io/swift-taptone-ios/privacy-policy/)
+- [Terms of Use](https://louisyoong.github.io/swift-taptone-ios/terms-of-use/)
+- [Support](https://louisyoong.github.io/swift-taptone-ios/support/)
 
 ## Requirements
 

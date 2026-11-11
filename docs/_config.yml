@@ -1,0 +1,6 @@
+title: TapTone
+description: Helping colorblind users distinguish colors better.
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
