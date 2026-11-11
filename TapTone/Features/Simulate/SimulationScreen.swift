@@ -39,14 +39,19 @@ private struct SimulationLiveView<Feed: View>: View {
     @Environment(\.strings) private var strings
 
     var body: some View {
-        ZStack {
-            Color.black
-            GeometryReader { proxy in
-                feed()
-                    .scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
+        // The feed runs full screen (under the status bar and behind the glass
+        // menu); the label and filter bar stay in the safe area.
+        Color.clear.background {
+            ZStack {
+                Color.black
+                GeometryReader { proxy in
+                    feed()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .clipped()
+                }
             }
+            .ignoresSafeArea()
         }
         .overlay(alignment: .topLeading) {
             PreviewLabel(
@@ -66,7 +71,6 @@ private struct SimulationLiveView<Feed: View>: View {
             .padding(.bottom, 16)
         }
         .sensoryFeedback(.selection, trigger: activeFilter)
-        .clipped()
     }
 }
 

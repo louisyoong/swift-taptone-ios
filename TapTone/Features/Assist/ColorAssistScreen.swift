@@ -55,14 +55,16 @@ struct ColorAssistScreen: View {
             actionButtons
             Spacer().frame(height: 18)
             filtersHeader
-            Spacer().frame(height: 10)
+            Spacer().frame(height: 4)
+            // Clipped to its own bounds (so it never slides under the menu);
+            // the padding leaves room for the selection badge and outline.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) { filterTiles }
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 10)
             }
-            .scrollClipDisabled()
-            .frame(height: 124)
+            .padding(.horizontal, -6)
+            .frame(height: 136)
         }
         .padding(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
         .readableWidth(720)

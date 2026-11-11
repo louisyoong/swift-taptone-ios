@@ -33,6 +33,22 @@ private struct DetectorLiveView<Feed: View>: View {
     @ViewBuilder let feed: () -> Feed
 
     var body: some View {
+        // Feed, vignette and target run full screen (under the status bar and
+        // behind the glass menu); the result panel stays in the safe area.
+        Color.clear.background {
+            fullScreenFeed.ignoresSafeArea()
+        }
+        .overlay(alignment: .bottom) {
+            DetectedColorPanel(detected: detected)
+                .frame(maxWidth: 520)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+        }
+    }
+
+    /// Centered on the whole screen, so the target sits on the frame centre
+    /// that the color is sampled from.
+    private var fullScreenFeed: some View {
         ZStack {
             // Overlay keeps the feed from sizing the screen wider than its container.
             Color.black.overlay { feed() }.clipped()
@@ -46,13 +62,6 @@ private struct DetectorLiveView<Feed: View>: View {
             .allowsHitTesting(false)
             CameraTarget(color: detected.rgb.color)
         }
-        .overlay(alignment: .bottom) {
-            DetectedColorPanel(detected: detected)
-                .frame(maxWidth: 520)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
-        }
-        .clipped()
     }
 }
 

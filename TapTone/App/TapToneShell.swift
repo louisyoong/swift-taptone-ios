@@ -10,55 +10,57 @@ struct TapToneShell: View {
     var body: some View {
         GeometryReader { proxy in
             let placement = RailPlacement(size: proxy.size, insets: proxy.safeAreaInsets, direction: layoutDirection)
-            // AnyLayout keeps the current page alive when the layout switches
-            // (fold/unfold, rotation), so the camera and test progress survive.
-            let layout: AnyLayout = switch placement {
-            case .none: AnyLayout(VStackLayout(spacing: 0))
-            case .left, .right: AnyLayout(HStackLayout(spacing: 0))
-            case .inStatusColumn: AnyLayout(ZStackLayout())
-            }
-            layout {
-                currentPage
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    // Keep scrolling rows (e.g. Assist filters) from sliding under the rail.
-                    .clipped()
-                    // Pages keep the app's real reading direction even when the
-                    // stack below is flipped to put the rail on the left.
-                    .environment(\.layoutDirection, layoutDirection)
-                switch placement {
-                case .none:
-                    LiquidGlassNavBar(
-                        items: items,
-                        currentIndex: selectedIndex,
-                        onTap: { selectedIndex = $0 },
-                        isDark: palette.isDark,
-                        activeColor: palette.primary,
-                        inactiveColor: palette.onSurfaceVariant,
-                        glassColor: glassColor
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .environment(\.layoutDirection, layoutDirection)
-                case .left, .right:
-                    rail(compact: false)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+            // The menu is a safe-area inset rather than a sibling, so camera
+            // pages can run full screen behind the glass menu while other pages
+            // keep their content clear of it. The modifier chain stays the same
+            // for every placement, so the current page (camera, test progress)
+            // survives fold/unfold and rotation.
+            currentPage
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .environment(\.layoutDirection, layoutDirection)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if placement == .none {
+                        LiquidGlassNavBar(
+                            items: items,
+                            currentIndex: selectedIndex,
+                            onTap: { selectedIndex = $0 },
+                            isDark: palette.isDark,
+                            activeColor: palette.primary,
+                            inactiveColor: palette.onSurfaceVariant,
+                            glassColor: glassColor
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                         .environment(\.layoutDirection, layoutDirection)
-                case let .inStatusColumn(onRight, width):
-                    // Folded iPhone Duo: sit inside the system's status column,
-                    // lined up under the clock and Wi-Fi icon, at the bottom end.
-                    rail(compact: true)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(width: width)
-                        .padding(.bottom, 8)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: onRight ? .bottomTrailing : .bottomLeading)
-                        .offset(x: onRight ? width : -width)
-                        .transition(.opacity)
-                        .environment(\.layoutDirection, layoutDirection)
+                    }
                 }
-            }
-            // Stacks order children leading → trailing, so pick the direction
-            // that lands the rail on the requested physical side.
-            .environment(\.layoutDirection, placement == .left ? .rightToLeft : .leftToRight)
-            .animation(.smooth(duration: 0.3), value: placement)
+                // Physical right / left (the container below is pinned to LTR).
+                .safeAreaInset(edge: .trailing, spacing: 0) {
+                    if placement == .right {
+                        rail(compact: false)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                }
+                .safeAreaInset(edge: .leading, spacing: 0) {
+                    if placement == .left {
+                        rail(compact: false)
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
+                }
+                .overlay {
+                    if case let .inStatusColumn(onRight, width) = placement {
+                        // Folded iPhone Duo: sit inside the system's status column,
+                        // lined up under the clock and Wi-Fi icon, at the bottom end.
+                        rail(compact: true)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(width: width)
+                            .padding(.bottom, 8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: onRight ? .bottomTrailing : .bottomLeading)
+                            .offset(x: onRight ? width : -width)
+                            .transition(.opacity)
+                    }
+                }
+                .environment(\.layoutDirection, .leftToRight)
+                .animation(.smooth(duration: 0.3), value: placement)
         }
         .background(palette.scaffold.ignoresSafeArea())
     }
@@ -74,6 +76,7 @@ struct TapToneShell: View {
             glassColor: glassColor,
             compact: compact
         )
+        .environment(\.layoutDirection, layoutDirection)
     }
 
     /// Where the tab menu goes.
